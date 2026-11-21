@@ -60,3 +60,15 @@ uv run python demos/papers/plot_manifold_workflows.py \
 ```
 
 Pass `--steering` more than once to plot disjoint steering shards together.
+
+## Unity reference
+
+The [Unity reference record](artifacts/figures/manifold_fig4/unity_reference.json)
+contains the pooled energies for all 21 pairs, the snapshot, the tested commit,
+and the Slurm job IDs. The fit ran once on a single L40S, followed by three
+steering jobs of seven pairs each and a CPU collection job. Overall energy was
+0.3293 for the spline and 0.9262 for the chord. Both means fall within the
+recorded absolute tolerances against the committed Figure 4 replication.
+The chord wins every neighboring pair and the spline wins every farther pair.
+This records drift against the committed replication using the same prompt
+pool and the full-residual chord.
