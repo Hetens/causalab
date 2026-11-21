@@ -50,4 +50,10 @@ isometry summaries. Energy is the sum of Bhattacharyya distances over the
 path, averaged over prompts. Higher coherence means more probability mass
 on the configured answer tokens. Isometry correlates activation-space
 lengths with behavior-space lengths. Paired tests use the selected pairs
-as observations. Interactive figures are post-hoc consumers of these tables.
+as observations. Figures are post-hoc consumers of these tables.
+
+```bash
+uv run python demos/papers/plot_manifold_workflows.py \
+  --fit /path/to/runs/manifold_fit --steering /path/to/runs/path_steering \
+  --out /path/to/manifold.png
+```
