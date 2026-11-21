@@ -61,6 +61,7 @@ paths per (pair, step) in the same coordinates.
 
 from __future__ import annotations
 
+import hashlib
 import itertools
 import json
 import sys
@@ -77,7 +78,12 @@ from splines import (  # noqa: E402  (a sibling module, hashed into the step's c
     wrapped_delta,
 )
 
-from causalab.io.step_io import StepError, read_tensor, write_table  # noqa: E402
+from causalab.io.step_io import (  # noqa: E402
+    StepError,
+    read_tensor,
+    write_table,
+    write_values,
+)
 from causalab.io.step_record import EXAMPLE_COLUMN  # noqa: E402
 from causalab.protocol.results import example_labels  # noqa: E402
 
@@ -148,7 +154,13 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     mean = read_tensor(Path(inputs["mean"]), what="manifold_path: 'mean'")
     basis = basis.detach().cpu().double().numpy()  # (d, k)
     mean = mean.detach().cpu().double().numpy()  # (d,)
-    rows = json.loads(Path(inputs["table"]).read_text())
+    table = Path(inputs["table"]).read_bytes()
+    if "contract" in inputs:
+        if hashlib.sha256(table).hexdigest() != inputs["contract"]["fit_table_sha256"]:
+            raise StepError(
+                "manifold_path: the fitting dataset changed; regenerate the documents"
+            )
+    rows = json.loads(table)
     steps = int(inputs.get("steps", 50))
     if steps < 2:
         raise StepError("manifold_path: 'steps' must be at least 2")
@@ -313,3 +325,5 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     write_table(Path(outputs["path"]), path_rows)
     if "lengths" in outputs:
         write_table(Path(outputs["lengths"]), lengths)
+    if "contract" in outputs:
+        write_values(Path(outputs["contract"]), inputs["contract"])

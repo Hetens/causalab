@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import itertools
 import json
 import os
@@ -180,6 +181,21 @@ def build(config: dict, data_root: Path, directory: Path, runs: Path) -> None:
     path = fit["manifold_path"]
     path["script"]["path"] = "scripts/manifold_path.py"
     path["inputs"].update(common, steps=steps, projected_chord=projected)
+    fit_contract = {
+        "model": model,
+        "site": harvest["method"]["sites"]["target"],
+        "position": harvest["method"]["positions"]["slot"],
+        "classes": classes,
+        "label_field": label_field,
+        "fit_dataset": fit_dataset,
+        "fit_table_sha256": hashlib.sha256(fit_table.read_bytes()).hexdigest(),
+        "answer_groups": groups,
+        "pca_components": k,
+        "projected_chord": projected,
+        "waypoints": steps,
+        "behavior_samples": config.get("behavior_samples", 1050),
+    }
+    path["inputs"]["contract"] = fit_contract
     path_outputs = {
         f"{kind}_{pair}": f"{kind}_{pair}.safetensors"
         for pair in all_pairs
@@ -191,6 +207,7 @@ def build(config: dict, data_root: Path, directory: Path, runs: Path) -> None:
             for slot in ("centroids", "points", "spline", "path")
         },
         **path_outputs,
+        "contract": "contract.json",
         "lengths": {
             "file": "lengths.json",
             "columns": {
@@ -232,6 +249,7 @@ def build(config: dict, data_root: Path, directory: Path, runs: Path) -> None:
         },
     }
     products = {slot: ref["file"] for slot, ref in product_refs.items()}
+    validation = {"contract": _ref("manifold_path", "contract.json")}
     energy["script"]["path"] = "scripts/energy.py"
     energy["inputs"] = {
         "classes": classes,
@@ -263,7 +281,7 @@ def build(config: dict, data_root: Path, directory: Path, runs: Path) -> None:
         "fit_inputs": {
             "type": "script",
             "script": {"path": "scripts/import_fit.py"},
-            "inputs": product_refs,
+            "inputs": {**product_refs, **validation, "expected": fit_contract},
             "outputs": products,
         },
         "steer": {"type": "intervention_protocol", "document": "steer.json"},
@@ -273,8 +291,11 @@ def build(config: dict, data_root: Path, directory: Path, runs: Path) -> None:
     _workflow(directory, "manifold_comparison", {**fit, **steer_steps})
     fit_root = runs / "manifold_fit"
     steer_steps["fit_inputs"]["inputs"] = {
-        slot: _external(fit_root / ref["step"] / ref["file"], directory)
-        for slot, ref in product_refs.items()
+        **{
+            slot: _external(fit_root / ref["step"] / ref["file"], directory)
+            for slot, ref in (product_refs | validation).items()
+        },
+        "expected": fit_contract,
     }
     _workflow(directory, "path_steering", steer_steps)
 
