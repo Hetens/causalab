@@ -305,9 +305,9 @@ def _workflow(directory: Path, name: str, steps: dict) -> None:
         directory / f"{name}.json",
         {
             "version": "1",
+            "description": "Cyclic manifold steering. Saved tables are available for post-hoc plotting.",
             "output_dir": name,
             "steps": steps,
-            "description": "Cyclic manifold steering. Saved tables are available for post-hoc plotting.",
         },
     )
 

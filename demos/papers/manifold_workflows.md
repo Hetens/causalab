@@ -32,8 +32,9 @@ across the joined pairs.
 
 The configuration names a model snapshot, layer, dataset paths relative to
 the data root, the fit table's label field, cyclic class order, PCA rank,
-waypoint count, and answer token forms. The fit dataset must have one `input`
-field per row and cover every label. Use distinct alphanumeric labels and
+waypoint count, and answer token forms. Both datasets need `input` and
+`split` fields per row. Use `"split": "all"` for an undivided table.
+The fit dataset must cover every label. Use distinct alphanumeric labels and
 single-token answer forms. Fit and steering prompts can be separate. The
 angular ordering is estimated from the first two activation PCs. Review the
 saved centroids to see whether their ordering matches the intended cycle.
@@ -57,3 +58,5 @@ uv run python demos/papers/plot_manifold_workflows.py \
   --fit /path/to/runs/manifold_fit --steering /path/to/runs/path_steering \
   --out /path/to/manifold.png
 ```
+
+Pass `--steering` more than once to plot disjoint steering shards together.

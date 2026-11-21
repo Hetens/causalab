@@ -10,7 +10,7 @@ from pathlib import Path
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--fit", required=True, type=Path)
-    parser.add_argument("--steering", required=True, type=Path)
+    parser.add_argument("--steering", required=True, type=Path, action="append")
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args()
 
@@ -24,9 +24,11 @@ def main() -> None:
 
     spline = read(args.fit, "manifold_path/spline.json")
     centroids = read(args.fit, "manifold_path/centroids.json")
-    energy = read(args.steering, "energy/energy.json")
+    energy = [row for run in args.steering for row in read(run, "energy/energy.json")]
     pairs = list(dict.fromkeys(row["pair"] for row in energy))
     scores = {(row["pair"], row["method"]): row["energy_sum"] for row in energy}
+    if len(scores) != len(energy):
+        parser.error("steering run trees contain overlapping pairs")
     differences = [scores[pair, "linear"] - scores[pair, "manifold"] for pair in pairs]
     spline_color, chord_color = "#2c6e9c", "#b05e28"
 

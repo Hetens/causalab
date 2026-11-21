@@ -42,12 +42,17 @@ def test_split_and_combined_manifold_workflows(tmp_path: Path) -> None:
     data = tmp_path / "data"
     data.mkdir()
     rows = [
-        {"input": f"Circle location {place}. Option {label}. Answer:", "answer": label}
+        {
+            "input": f"Circle location {place}. Option {label}. Answer:",
+            "answer": label,
+            "split": "all",
+        }
         for label, place in zip("ABCD", ("north", "east", "south", "west"))
     ]
     (data / "fit.json").write_text(json.dumps(rows), encoding="utf-8")
     (data / "heldout.json").write_text(
-        json.dumps([{"input": "Which circle location? Answer:"}]), encoding="utf-8"
+        json.dumps([{"input": "Which circle location? Answer:", "split": "all"}]),
+        encoding="utf-8",
     )
     docs, runs = tmp_path / "documents", tmp_path / "runs"
     builder.build(CONFIG, data, docs, runs)
