@@ -86,8 +86,6 @@ def _mean_se(values: np.ndarray) -> tuple[float, float]:
 
 
 def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
-    from scipy import stats
-
     classes = list(inputs.get("classes", DAYS))
     bins = [*classes, "other"]
     spellings = inputs.get("spellings", SPELLINGS)
@@ -214,11 +212,7 @@ def main(inputs: Mapping[str, Any], outputs: Mapping[str, Path]) -> None:
     linear_values = np.array([per_path["linear"][p] for p in pairs])
     m_mean, m_se = _mean_se(manifold_values)
     l_mean, l_se = _mean_se(linear_values)
-    if len(pairs) > 1:
-        test = stats.ttest_rel(linear_values, manifold_values)
-        t_stat, p_value = float(test.statistic), float(test.pvalue)
-    else:
-        t_stat, p_value = float("nan"), float("nan")
+    t_stat, p_value = _paired_test(linear_values, manifold_values)
 
     write_table(Path(outputs["trajectory"]), trajectory_rows)
     write_table(Path(outputs["energy"]), energy_rows)
@@ -256,8 +250,6 @@ def geometry_scores(
     energy_rows: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Centroid-only isometry and paired comparisons of on-concept mass."""
-    from scipy import stats
-
     lengths = {row["pair"]: row for row in activation_lengths}
     behavior_lengths = []
     for pair in pairs:
@@ -287,12 +279,24 @@ def geometry_scores(
                 {"metric": metric, "method": method, "value": float(data.mean())}
             )
         if len(pairs) > 1:
-            test = stats.ttest_rel(*values)
+            _, p_value = _paired_test(*values)
             results.append(
                 {
                     "metric": f"{metric}_paired_p",
                     "method": "paired",
-                    "value": float(test.pvalue),
+                    "value": p_value,
                 }
             )
     return results
+
+
+def _paired_test(
+    left: np.ndarray, right: np.ndarray
+) -> tuple[float | None, float | None]:
+    """Return JSON null for a paired test without an estimable standard error."""
+    from scipy import stats
+
+    if len(left) < 2 or np.ptp(left - right) == 0:
+        return None, None
+    test = stats.ttest_rel(left, right)
+    return float(test.statistic), float(test.pvalue)

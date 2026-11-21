@@ -57,16 +57,16 @@ def test_split_and_combined_manifold_workflows(tmp_path: Path) -> None:
     docs, runs = tmp_path / "documents", tmp_path / "runs"
     builder.build(CONFIG, data, docs, runs)
 
-    def run(name: str) -> None:
+    def run(name: str, documents: Path = docs, output: Path = runs) -> None:
         assert (
             main(
                 [
                     "run",
-                    str(docs / f"{name}.json"),
+                    str(documents / f"{name}.json"),
                     "--data-root",
                     str(data),
                     "--out",
-                    str(runs),
+                    str(output),
                     "--device",
                     "cpu",
                     "--engine",
@@ -86,3 +86,12 @@ def test_split_and_combined_manifold_workflows(tmp_path: Path) -> None:
     energy = json.loads((split / "energy.json").read_text())
     assert len(energy) == 2 * len(CONFIG["pairs"])
     assert {row["n_prompts"] for row in energy} == {1}
+
+    single_docs, single_runs = tmp_path / "single_docs", tmp_path / "single_runs"
+    builder.build({**CONFIG, "pairs": ["A_B"]}, data, single_docs, runs)
+    run("path_steering", single_docs, single_runs)
+    summary = json.loads(
+        (single_runs / "path_steering/energy/summary.json").read_text()
+    )
+    assert summary["n_pairs"] == 1
+    assert summary["paired_t"] is summary["paired_p"] is None
